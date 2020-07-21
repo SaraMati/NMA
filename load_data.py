@@ -19,6 +19,11 @@ channels = one.load_object(session, 'channels')
 probes = one.load_object(session, 'probes')
 
 '''
+Session 11 has:
+channels: 1122
+clusters: 1219
+spikes: 11,757,530
+
 trial timeline:
 1. mouse holds wheel still for a short interval (0.2-0.5s)
 2. trial initiates with stimulus onset
@@ -55,9 +60,10 @@ vis_cx_channels = brain_locations[brain_locations['allen_ontology'].str.contains
 vis_cx_channels_id = vis_cx_channels.index  #gets the channel ID
 
 # clusters.peakChannel contains the channel number of the location of the peak of the cluster's waveform
+# thresholding _phy_annotation >= 2 to only count clusters from a single neuron
 # pull out clusters from regions of interest using channel ID
 # gets the indices/IDs of clusters from the region of interest
-cluster_channels = pd.DataFrame(clusters.peakChannel)
+cluster_channels = pd.DataFrame(clusters.peakChannel[clusters._phy_annotation>=2])
 vis_cx_clusters_id = cluster_channels[cluster_channels.isin(vis_cx_channels_id)].dropna().index
 
 # for example, to get waveform durations of all peaks from vis cx clusters:
