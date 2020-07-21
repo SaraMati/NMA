@@ -35,20 +35,29 @@ vis_cx_waveformDuration = clusters.waveformDuration[vis_cx_clusters_id]
 # pull out spikes from regions of interest using cluster ID
 # gets the spike IDs of spikes from the region of interest
 spike_clusters = pd.DataFrame(spikes.clusters)
+vis_cx_spikes = spike_clusters[spike_clusters.isin(vis_cx_clusters_id)].dropna()
+vis_cx_spikes.columns = {'cluster'} # rename column; each row is a spike, with its column denoting its cluster 
 vis_cx_spikes_id = spike_clusters[spike_clusters.isin(vis_cx_clusters_id)].dropna().index
 
+# counts the number of spikes per cluster
+cluster_spike_counts = vis_cx_spikes.groupby('cluster').cluster.count()
+
+
+
 # to get spike times of spikes from vis cx:
-vis_cx_spikes_times = spikes.times[vis_cx_spikes_id]
+vis_cx_spikes_times = pd.DataFrame(spikes.times[vis_cx_spikes_id].squeeze())
+vis_cx_spikes_times.columns = {'spike time'}
+vis_cx_spikes_times.index = vis_cx_spikes_id    # set index to match ID of spike
+vis_cx_spikes_times = pd.concat([vis_cx_spikes_times, vis_cx_spikes], axis=1) # 
 
+# get list of spike times grouped by clusters/neurons
+vis_cx_spikes_times_clustered = vis_cx_spikes_times.groupby('cluster').apply(lambda x: x['spike time'].unique())
 
-
-
-x_truncated = x[:100].squeeze()
+# raster plots of all neurons in region of interest
 
 plt.figure()
-plt.eventplot(x_truncated)
+plt.eventplot(vis_cx_spikes_times_clustered.values[:5])
 plt.xlabel("Time (s)")
 plt.yticks([])
 plt.show
 
-brain_locations = one.load_dataset(session, 'channels.brainLocation')
