@@ -12,10 +12,41 @@ session = sessions[11]
 one.list(session)
 
 # loads all the objects from the session
+trials = one.load_object(session, 'trials')
 spikes = one.load_object(session, 'spikes')
 clusters = one.load_object(session, 'clusters')
 channels = one.load_object(session, 'channels')
 probes = one.load_object(session, 'probes')
+
+'''
+trial timeline:
+1. mouse holds wheel still for a short interval (0.2-0.5s)
+2. trial initiates with stimulus onset
+3. after stimulus onset, there is random delay interval of 0.5-1.2s
+4. at end of delay interval, auditory tone cue is delivered (Go cue)
+5. in the following 1.5s, mouse moves wheel (or doesn't, if no stimulus presented) 
+6. feedback is delivered at the end of 1.5s, for 1s duration
+7. 1s inter-trial interval
+8. mouse can initiate another trial by holding the wheel still
+
+windows of interest for firing rates:
+- baseline: -0.2 to 0s relative to stimulus onset
+- trial firing rate: stimulus onset to 400 ms post-stimulus
+- stimulus-driven: 0.05 to 0.15s after stimulus onset
+- pre-movement FR: -0.1 to 0.05s relative to movement onset
+- post-movement FR: -0.05 to 0.2s relative to movement onset
+- post-reward rate: 0 to 0.15s relative to reward delivery for correct NoGos
+
+logic for chaining indices:
+
+1. channels.brainLocation = lists all the channels and their corresponding brain region. Each row here
+    is a unique channel ID (3x383 probes, indexed from 0 = 1152 channels)
+2. so we extract vis_cx_channels_id to get the channel ids (row #) with specific brain regions
+3. clusters.peakChannel = lists all the channel numbers for each cluster
+4. we extract vis_cx_clusters_id to get the cluster ids with channel numbers matching vis_cx_channels_id
+5. spikes.clusters = lists the cluster number for each spike
+6. so we can extract vis_cx_spikes to get the spike IDs with cluster IDs matching vis_cx_channels_id
+'''
 
 # pull out channels from regions of interest (Vis cortex here)
 regions = "VIS"
@@ -54,10 +85,10 @@ vis_cx_spikes_times = pd.concat([vis_cx_spikes_times, vis_cx_spikes], axis=1) #
 vis_cx_spikes_times_clustered = vis_cx_spikes_times.groupby('cluster').apply(lambda x: x['spike time'].unique())
 
 # raster plots of all neurons in region of interest
-
 plt.figure()
-plt.eventplot(vis_cx_spikes_times_clustered.values[:5])
+plt.eventplot(vis_cx_spikes_times_clustered.values[0], color=".2")
 plt.xlabel("Time (s)")
+plt.ylabel("Neuron")
 plt.yticks([])
-plt.show
+plt.show()
 
