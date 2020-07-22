@@ -44,7 +44,7 @@ class SubnetworkFinder:
 """
     Drives the SubnetworkFinder during development
 """
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     # Dummy spike count matrix for 3 neurons with 10 trials
     spikes_per_trial_neuron_x = pd.Series(range(10, 20))
     spikes_per_trial_neuron_y = pd.Series([2, 1, 4, 5, 8, 12, 18, 25, 96, 48])
@@ -54,4 +54,4 @@ if __name__ == "__main__":
                                        'neuron_y': spikes_per_trial_neuron_y,
                                        'neuron_z': spikes_per_trial_neuron_z})
 
-    SubnetworkFinder().find_network_by_linear_correlation(spike_count_matrix)
+    SubnetworkFinder().find_network_by_linear_correlation(spike_count_matrix)"""
