@@ -29,28 +29,21 @@ class DataLoader:
         ids = matching_channels.index
 
         clusters = self.one.load_object(session, 'clusters')
-        cluster_channels = pd.DataFrame(clusters.peakChannel)
+        cluster_channels = pd.DataFrame(clusters.peakChannel[clusters._phy_annotation>=2])
 
         # Taking the values inside cluster_channels to link back to the row indexes in brain_locations
         indexes_of_matching_clusters = cluster_channels[cluster_channels.isin(ids)].dropna().index
+
         # Use these indexes to find the spikes
         spike_data = self.one.load_object(session, 'spikes')
         spike_clusters = pd.DataFrame(spike_data.clusters)
+        # All of the spikes for this region
+        spikes = spike_clusters[spike_clusters.isin(indexes_of_matching_clusters)].dropna()
 
-        #All of the spikes for this region
-        spikes = spike_clusters[spike_clusters.isin(indexes_of_matching_clusters)].dropna().index
+        spikes.columns = {'cluster'}  # rename column; each row is a spike, with its column denoting its cluster
+        cluster_spike_counts = spikes.groupby('cluster').cluster.count()
 
-        # Series = Columns
-        # We want to append multiple data frames (i.e. rows)
-        spikes_per_cluster = pd.DataFrame(columns=["cluster", "spikes_for_cluster"])
-        for index in indexes_of_matching_clusters:
-            spikes_for_cluster = spike_clusters[spike_clusters == index].dropna()
-            indexes_of_spikes_per_cluster = spikes_for_cluster.index
-            df_for_cluster = pd.DataFrame({"cluster":20, "spikes_for_cluster":indexes_of_spikes_per_cluster})
-            spikes_per_cluster.append(df_for_cluster)
-
-        #Loop thru all of the spike clusters -> if in
-        i = 0
+        return cluster_spike_counts
 
     @staticmethod
     def __initialise_one_session():
