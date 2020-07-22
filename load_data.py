@@ -19,6 +19,8 @@ channels = one.load_object(session, 'channels')
 probes = one.load_object(session, 'probes')
 
 '''
+See https://github.com/nsteinme/steinmetz-et-al-2019/wiki/data-files for description of dataset
+
 Session 11 has:
 channels: 1122
 clusters: 1219
@@ -52,6 +54,56 @@ logic for chaining indices:
 5. spikes.clusters = lists the cluster number for each spike
 6. so we can extract vis_cx_spikes to get the spike IDs with cluster IDs matching vis_cx_channels_id
 '''
+
+# get event times
+response_times = trials.response_times
+visual_stim_times = trials.visualStim_times
+gocue = trials.goCue_times
+feedback = trials.feedback_times
+
+# getting times relative to visual stimulus onset
+response_times = response_times - visual response_times
+feedback = feedback - visual_stim_times
+gocue = gocue - visual_times
+
+# defining trials
+dt = 1/100 # bin size
+dT = 2.5 # total time in trial / length of trial
+T0 = .5 # stimulus onset within a trial / time of trial start
+trial_onset_times = visual_stim_times - T0
+n_trials = len(trial_onset_times) # number of trials in this session
+
+# finding the first spikes within a trial, totally stolen
+# basically keeps shrinking the window until the first spike after trial onset is identified
+def first_spikes(spike_times, trial_onset_times):
+    tlow = 0
+    thigh = len(spike_times)
+
+    while thigh>tlow+1:
+        thalf = (thigh + tlow)//2
+        sthalf = spike_times[thalf]
+        if trial_onset_times >= sthalf:
+            tlow = thalf
+        else:
+            thigh = thalf
+    return thigh
+
+
+# PSTH for spikes within the trials
+# makes an array of n_clusters arrays, n_trials rows, dT/dt columns
+n_clusters = np.max(spikes.clusters)+1
+time_bins = int(dT/dt)
+
+spikes_trials = np.zeros((n_clusters, ntrials, time_bins))
+for trial in range(ntrials):
+    first_spk = first_spikes(spike.times, trial_onset_times[trial])
+    last_spk = first_spikes(spike.times, trial_onset_times[trial]+dT)
+    trial_spk_times = spike_times[first_spk:last_spk] - trial_onset_times[trial]
+    trial_clusters = spikes.cluster[first_spk:last_spk]
+    spikes_trials[:, trial, :] = 
+
+
+
 
 # pull out channels from regions of interest (Vis cortex here)
 regions = "VIS"
