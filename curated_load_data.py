@@ -162,7 +162,7 @@ for trial_number in range(len(dat['response_time'])):
 
     all_spikes_in_window = []
     all_counts_in_window = []
-    neuron_ids = range(len(dat_ST['ss']))
+    neuron_ids = np.where(dat['brain_area']==region)[0]
 
     for cell in range(len(all_spike_times)):
         mask = np.logical_and(all_spike_times[cell] >= pre_move_window_start, all_spike_times[cell] <= trial_response_time)
