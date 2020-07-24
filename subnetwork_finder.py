@@ -1,17 +1,18 @@
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class SubnetworkFinder:
     """
     Class to detect functional networks in specific regions
 
-    Attributes:
-
     Methods:
 
     """
 
-    def find_network_by_linear_correlation(self, activity_matrix):
+    @staticmethod
+    def find_network_by_linear_correlation(activity_matrix):
         """
         Method to find the neurons in this area which are correlated in
         terms of activity - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586814/
@@ -36,22 +37,18 @@ class SubnetworkFinder:
 
         Matrix of dimensions: number_neurons x number_neurons - length of activity_matrix
         """
-        adjacency_matrix = activity_matrix.corr()
+
+        adjacency_matrix = activity_matrix.T.corr()
 
         return adjacency_matrix
 
+    @staticmethod
+    def create_heatmap_from_adjacency_matrix(region, adjacency_matrix):
+        sns.heatmap(adjacency_matrix,
+                    fmt='.1g',
+                    vmin=-1, vmax=1, center=0,
+                    cmap='coolwarm',
+                    yticklabels=True, xticklabels=True).set_title(region)
+        plt.show()
 
-"""
-    Drives the SubnetworkFinder during development
-"""
-"""if __name__ == "__main__":
-    # Dummy spike count matrix for 3 neurons with 10 trials
-    spikes_per_trial_neuron_x = pd.Series(range(10, 20))
-    spikes_per_trial_neuron_y = pd.Series([2, 1, 4, 5, 8, 12, 18, 25, 96, 48])
-    spikes_per_trial_neuron_z = pd.Series([5, 3, 2, 1, 0, 7, 0, 0, 1, 0])
 
-    spike_count_matrix = pd.DataFrame({'neuron_x': spikes_per_trial_neuron_x,
-                                       'neuron_y': spikes_per_trial_neuron_y,
-                                       'neuron_z': spikes_per_trial_neuron_z})
-
-    SubnetworkFinder().find_network_by_linear_correlation(spike_count_matrix)"""
