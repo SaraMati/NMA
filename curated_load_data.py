@@ -141,6 +141,7 @@ brain_groups = [["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl"], # visual co
 
 session_number = 11
 dat = alldat[session_number]
+region = "VISam"
 
 dat_LFP = all_dat_LFP[session_number]
 dat_WAV = all_dat_WAV[session_number]
@@ -149,13 +150,15 @@ dat_ST = all_dat_ST[session_number]
 all_trials_window_spikes = {} # creates dict of dicts
 all_trials_window_counts = {}
 
+# gets spike times and counts for all neurons in all trials for region of interest
+
 for trial_number in range(len(dat['response_time'])):
 
     # for all neurons, extract spike counts in the window [t-100ms, t], where t is the response time
     trial_response_time = dat['response_time'][trial_number] # response time for the first trial
     pre_move_window_start = trial_response_time - 0.1
 
-    all_spike_times = dat_ST['ss'][:,trial_number] # spike times for the first trial in all neurons
+    all_spike_times = dat_ST['ss'][dat['brain_area']==region][:,trial_number] # spike times for the first trial in all neurons
 
     all_spikes_in_window = []
     all_counts_in_window = []
