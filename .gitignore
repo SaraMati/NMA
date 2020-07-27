@@ -1,0 +1,6 @@
+.idea/*
+__pycache__/*
+*.npz
+
+steinmetz_NMA.py
+steinmetz_loader.py
