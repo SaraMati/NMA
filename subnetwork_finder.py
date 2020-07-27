@@ -1,18 +1,45 @@
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import networkx as nx
+
+import numpy as np
+from scipy import stats
+import math
 
 
 class SubnetworkFinder:
     """
-    Class to detect functional networks in specific regions
+    Class to detect and visualise functional networks in specific regions
 
     Methods:
 
     """
+    @staticmethod
+    def above_percentile(cell_value, flattened_matrix, percentile):
+        if math.isnan(cell_value):
+            return False
+        return stats.percentileofscore(flattened_matrix, cell_value) >= percentile
 
     @staticmethod
-    def find_network_by_linear_correlation(activity_matrix):
+    def find_functional_subnetwork(adjacency_matrix, percentile=95):
+        mask = np.triu(np.ones_like(adjacency_matrix, dtype=np.bool))
+        upper_half = adjacency_matrix.where(mask).dropna(axis='columns', how='all').dropna(axis='rows', how='all')
+
+        flattened_matrix = upper_half.to_numpy().flatten()
+        flattened_matrix = flattened_matrix[~np.isnan(flattened_matrix)]
+
+        transformed_upper_half = upper_half.applymap(
+            lambda cell: SubnetworkFinder.above_percentile(cell, flattened_matrix, percentile))
+
+        np.fill_diagonal(transformed_upper_half.values, False)
+
+        # transformed_upper_half now has true when there is an 'above-threshold' connection
+        # between neurons
+
+        return transformed_upper_half.columns[(transformed_upper_half == True).any(axis=1)]
+
+    @staticmethod
+    def find_network_by_linear_correlation_full_window(activity_matrix):
         """
         Method to find the neurons in this area which are correlated in
         terms of activity - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586814/
@@ -42,13 +69,29 @@ class SubnetworkFinder:
 
         return adjacency_matrix
 
-    @staticmethod
-    def create_heatmap_from_adjacency_matrix(region, adjacency_matrix):
+
+class SubnetworkVisualiser:
+    """
+    Class to create visualisations for a region
+    """
+    def __init__(self, region):
+        self.region = region
+
+    def create_heatmap_from_adjacency_matrix(self, adjacency_matrix):
         sns.heatmap(adjacency_matrix,
                     fmt='.1g',
                     vmin=-1, vmax=1, center=0,
                     cmap='coolwarm',
-                    yticklabels=True, xticklabels=True).set_title(region)
+                    yticklabels=True, xticklabels=True).set_title(self.region)
         plt.show()
+
+    def create_histogram_of_cell_types(self, cells_with_extra_info):
+        sns.catplot(x="Cell_type", kind="count", palette="ch:.25", data=cells_with_extra_info)  #.set_title(self.region)
+        plt.show()
+
+    def create_graph_diagram(self, thresholded_adjacency_matrix):
+        nx.draw_networkx(thresholded_adjacency_matrix)
+        plt.show()
+
 
 
