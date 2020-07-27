@@ -46,7 +46,7 @@ class CuratedDataLoader:
         bin_size = dat['bin_size'] * 1000  # 10ms
 
         # Bin in which the response occurs for all of the neurons in the region
-        response_t_bins = (response_t_ms / bin_size) + 50  # Skip the first 50 bins before stimulus
+        response_t_bins = (response_t_ms / bin_size)
         response_t_bins = np.ceil(response_t_bins)
         number_of_bins = int(decision_time / bin_size)
 
@@ -97,7 +97,7 @@ class CuratedDataLoader:
         bin_size = dat['bin_size']*1000  # 10ms
 
         # Bin in which the response occurs for all of the neurons in the region
-        response_t_bins = (response_t_ms/bin_size) + 50  # Skip the first 50 bins before stimulus
+        response_t_bins = (response_t_ms/bin_size) 
         response_t_bins = np.ceil(response_t_bins)
         number_of_bins = decision_time/bin_size
 
