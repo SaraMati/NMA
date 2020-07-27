@@ -1,6 +1,8 @@
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
+import math
 
 
 class SubnetworkFinder:
@@ -10,9 +12,32 @@ class SubnetworkFinder:
     Methods:
 
     """
+    @staticmethod
+    def above_percentile(cell_value, flattened_matrix, percentile):
+        if math.isnan(cell_value):
+            return False
+        return stats.percentileofscore(flattened_matrix, cell_value) >= percentile
 
     @staticmethod
-    def find_network_by_linear_correlation(activity_matrix):
+    def find_functional_subnetwork(adjacency_matrix, percentile=95):
+        mask = np.triu(np.ones_like(adjacency_matrix, dtype=np.bool))
+        upper_half = adjacency_matrix.where(mask).dropna(axis='columns', how='all').dropna(axis='rows', how='all')
+
+        flattened_matrix = upper_half.to_numpy().flatten()
+        flattened_matrix = flattened_matrix[~np.isnan(flattened_matrix)]
+
+        transformed_upper_half = upper_half.applymap(
+            lambda cell: SubnetworkFinder.above_percentile(cell, flattened_matrix, percentile))
+
+        np.fill_diagonal(transformed_upper_half.values, False)
+
+        # transformed_upper_half now has true when there is an 'above-threshold' connection
+        # between neurons
+
+        return transformed_upper_half.columns[(transformed_upper_half == True).any(axis=1)]
+
+    @staticmethod
+    def find_network_by_linear_correlation_full_window(activity_matrix):
         """
         Method to find the neurons in this area which are correlated in
         terms of activity - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586814/
