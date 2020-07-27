@@ -1,13 +1,27 @@
 import numpy as np
 import os
+import csv
 import pandas as pd
 import requests
+from dataclasses import dataclass
 
 
 class SessionDataForRegion:
-    """Data container class for holding the extracted data for a region"""
+    """
+    Data container class for holding the extracted data for a region
+    Easier to have this as output so whenever we pass around the output (e.g. adjacency matrix)
+    , we'll know which region and session it's from
+    """
+
+    @dataclass
+    class SessionInfo:
+        index_in_curated_data: int = -1
+        mouse_name: str = "UNKNOWN"
+        session_date: str = "UNKNOWN"
+
     def __init__(self, region):
         self.region = region
+        self.session = SessionDataForRegion.SessionInfo()
         self.activity_matrix = pd.DataFrame()
         self.activity_matrices = list()
 
@@ -17,6 +31,9 @@ class SessionDataForRegion:
     def set_activity_matrices_per_bin(self, activity_matrices):
         self.activity_matrices = activity_matrices
 
+    def set_session_info(self, info):
+        self.session = info
+
 
 class CuratedDataLoader:
     """
@@ -25,44 +42,46 @@ class CuratedDataLoader:
     """
     session_number = 11
 
-    # TODO: have single method where you can pick what proportion of the
-    #
+    class DataForRegion:
+        """
+        Data holder class for use during data extraction
+
+        Not for external use
+        """
+        def __init__(self,
+                     indexes_for_neurons,
+                     response_bins_for_neurons,
+                     spikes_for_neurons):
+            self.indexes_for_neurons = indexes_for_neurons
+            self.response_bins_for_neurons = response_bins_for_neurons
+            self.spikes_for_neurons = spikes_for_neurons
+
+    def __init__(self):
+        self.bin_size_ms = -1
+        self.number_of_bins_for_analysis = -1
+
     @staticmethod
-    def spike_trains_decision_time_per_neuron(region, decision_time=100):
-        fname = CuratedDataLoader.download_data()
-        alldat = np.array([])
-        for j in range(len(fname)):
-            alldat = np.hstack((alldat, np.load('steinmetz_part%d.npz' % j, allow_pickle=True)['dat']))
+    def neuron_id_to_cell_type(neuron_ids, path_to_cell_type_csv):
 
-        dat = alldat[CuratedDataLoader.session_number]
+        cell_type_df = pd.read_csv(path_to_cell_type_csv)
+        #matching_cells = cell_type_df[cell_type_df.isin(neuron_ids)]
+        matching_cells = cell_type_df[cell_type_df.index.isin(neuron_ids)]
+        i = 0
 
-        neurons_with_brain_areas = dat['brain_area']
-        indexes_for_neurons_in_region = np.where(neurons_with_brain_areas == region)[0]
+        return matching_cells
 
-        # Response times per trial
-        response_t = dat['response_time']
-        response_t_ms = response_t * 1000
+    def spike_trains_decision_time_per_neuron(self, region, decision_time=100):
+        neuron_data, session_info = self.load_session(region, decision_time)
 
-        bin_size = dat['bin_size'] * 1000  # 10ms
+        df_list = [pd.DataFrame() for x in range(self.number_of_bins_for_analysis)]
 
-        # Bin in which the response occurs for all of the neurons in the region
-        response_t_bins = (response_t_ms / bin_size)
-        response_t_bins = np.ceil(response_t_bins)
-        number_of_bins = int(decision_time / bin_size)
+        for trial in range(neuron_data.spikes_for_neurons.shape[1]):
+            allneurons_one_trial = neuron_data.spikes_for_neurons[:, trial, :]
 
-        spike_data = dat['spks']
-        spikes_for_neurons_in_region = spike_data[indexes_for_neurons_in_region]
+            first_index = int(neuron_data.response_bins_for_neurons[trial][0] - self.number_of_bins_for_analysis)
+            last_index = int(neuron_data.response_bins_for_neurons[trial][0])
 
-        df_list = [pd.DataFrame() for x in range(number_of_bins)]
-
-        for trial in range(spikes_for_neurons_in_region.shape[1]):
-            allneurons_one_trial = spikes_for_neurons_in_region[:, trial, :]
-
-            first_index = int(response_t_bins[trial][0] - number_of_bins)
-            last_index = int(response_t_bins[trial][0])
-
-            # all of the bins
-            for bin_no in range(number_of_bins):
+            for bin_no in range(self.number_of_bins_for_analysis):
                 if allneurons_one_trial.shape[1] <= last_index:
                     df_list[bin_no][str(trial)] = np.zeros(len(allneurons_one_trial), dtype=int)
                 else:
@@ -72,44 +91,22 @@ class CuratedDataLoader:
                     df_list[bin_no][str(trial)] = x[:, bin_no].tolist()
 
         for df in df_list:
-            df.index = indexes_for_neurons_in_region
+            df.index = neuron_data.indexes_for_neurons
 
         data = SessionDataForRegion(region)
         data.set_activity_matrices_per_bin(df_list)
+        data.set_session_info(session_info)
         return data
 
-    @staticmethod
-    def spikes_in_decision_time_per_neuron(region, decision_time=100):
-        fname = CuratedDataLoader.download_data()
-        alldat = np.array([])
-        for j in range(len(fname)):
-            alldat = np.hstack((alldat, np.load('steinmetz_part%d.npz' % j, allow_pickle=True)['dat']))
-
-        dat = alldat[CuratedDataLoader.session_number]
-
-        neurons_with_brain_areas = dat['brain_area']
-        indexes_for_neurons_in_region = np.where(neurons_with_brain_areas == region)[0]
-
-        # Response times per trial
-        response_t = dat['response_time']
-        response_t_ms = response_t*1000
-
-        bin_size = dat['bin_size']*1000  # 10ms
-
-        # Bin in which the response occurs for all of the neurons in the region
-        response_t_bins = (response_t_ms/bin_size) 
-        response_t_bins = np.ceil(response_t_bins)
-        number_of_bins = decision_time/bin_size
-
-        spike_data = dat['spks']
-        spikes_for_neurons_in_region = spike_data[indexes_for_neurons_in_region]
+    def spikes_in_decision_time_per_neuron(self, region, decision_time=100):
+        neuron_data, session_info = self.load_session(region, decision_time)
 
         activity_matrix = pd.DataFrame()
-        for trial in range(spikes_for_neurons_in_region.shape[1]):
-            allneurons_one_trial = spikes_for_neurons_in_region[:, trial, :]
+        for trial in range(neuron_data.spikes_for_neurons.shape[1]):
+            allneurons_one_trial = neuron_data.spikes_for_neurons[:, trial, :]
 
-            first_index = int(response_t_bins[trial][0] - number_of_bins)
-            last_index = int(response_t_bins[trial][0])
+            first_index = int(neuron_data.response_bins_for_neurons[trial][0] - self.number_of_bins_for_analysis)
+            last_index = int(neuron_data.response_bins_for_neurons[trial][0])
             if allneurons_one_trial.shape[1] <= last_index:
                 activity_matrix[str(trial)] = np.zeros(len(allneurons_one_trial), dtype=int)
             else:
@@ -119,9 +116,10 @@ class CuratedDataLoader:
                 spike_counts_for_this_trial = np.sum(x, axis=1)
                 activity_matrix[str(trial)] = spike_counts_for_this_trial.tolist()
 
-        activity_matrix.index = indexes_for_neurons_in_region
+        activity_matrix.index = neuron_data.indexes_for_neurons
         data = SessionDataForRegion(region)
         data.set_activity_matrix(activity_matrix)
+        data.set_session_info(session_info)
         return data
 
     @staticmethod
@@ -144,6 +142,40 @@ class CuratedDataLoader:
 
         counts = pd.Series(spike_counts_per_neuron_across_all_trials, index=indexes_for_neurons_in_region)
         return counts
+
+    def load_session(self, region, decision_time):
+        fname = CuratedDataLoader.download_data()
+        alldat = np.array([])
+        for j in range(len(fname)):
+            alldat = np.hstack((alldat, np.load('steinmetz_part%d.npz' % j, allow_pickle=True)['dat']))
+
+        dat = alldat[CuratedDataLoader.session_number]
+
+        neurons_with_brain_areas = dat['brain_area']
+        indexes_for_neurons_in_region = np.where(neurons_with_brain_areas == region)[0]
+
+        # Response times per trial
+        response_t = dat['response_time']
+        response_t_ms = response_t * 1000
+
+        self.bin_size_ms = dat['bin_size'] * 1000  # 10ms
+
+        # Bin in which the response occurs for all of the neurons in the region
+        response_t_bins = (response_t_ms / self.bin_size_ms)
+        response_t_bins = np.ceil(response_t_bins)
+        self.number_of_bins_for_analysis = decision_time / self.bin_size_ms
+
+        spike_data = dat['spks']
+        spikes_for_neurons_in_region = spike_data[indexes_for_neurons_in_region]
+
+        info = SessionDataForRegion.SessionInfo()
+        info.index_in_curated_data = CuratedDataLoader.session_number
+        info.mouse_name = dat['mouse_name']
+        info.session_date = dat['date_exp']
+
+        return CuratedDataLoader.DataForRegion(indexes_for_neurons_in_region,
+                                               response_t_bins,
+                                               spikes_for_neurons_in_region), info
 
     @staticmethod
     def download_data():

@@ -1,5 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
+import networkx as nx
+
 import numpy as np
 from scipy import stats
 import math
@@ -7,7 +9,7 @@ import math
 
 class SubnetworkFinder:
     """
-    Class to detect functional networks in specific regions
+    Class to detect and visualise functional networks in specific regions
 
     Methods:
 
@@ -67,13 +69,29 @@ class SubnetworkFinder:
 
         return adjacency_matrix
 
-    @staticmethod
-    def create_heatmap_from_adjacency_matrix(region, adjacency_matrix):
+
+class SubnetworkVisualiser:
+    """
+    Class to create visualisations for a region
+    """
+    def __init__(self, region):
+        self.region = region
+
+    def create_heatmap_from_adjacency_matrix(self, adjacency_matrix):
         sns.heatmap(adjacency_matrix,
                     fmt='.1g',
                     vmin=-1, vmax=1, center=0,
                     cmap='coolwarm',
-                    yticklabels=True, xticklabels=True).set_title(region)
+                    yticklabels=True, xticklabels=True).set_title(self.region)
         plt.show()
+
+    def create_histogram_of_cell_types(self, cells_with_extra_info):
+        sns.catplot(x="Cell_type", kind="count", palette="ch:.25", data=cells_with_extra_info)  #.set_title(self.region)
+        plt.show()
+
+    def create_graph_diagram(self, thresholded_adjacency_matrix):
+        nx.draw_networkx(thresholded_adjacency_matrix)
+        plt.show()
+
 
 
