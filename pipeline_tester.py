@@ -13,6 +13,8 @@ def identify_network_and_visualise(region):
 
     adjacency_matrix -= shuffled_adjacency_matrix
     visualiser = SubnetworkVisualiser(region)
+
+    visualiser.create_histogram_of_correlations(adjacency_matrix, 95)
     visualiser.create_heatmap_from_adjacency_matrix(adjacency_matrix)
 
     threshold = 95
