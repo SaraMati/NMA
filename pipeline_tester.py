@@ -9,6 +9,9 @@ def identify_network_and_visualise(region):
     adjacency_matrix = finder.find_network_by_linear_correlation_full_window(extracted_data.activity_matrix)
     # TODO: other measures of the graph - clustering coefficient? characteristic path length?
 
+    shuffled_adjacency_matrix = finder.find_adjacency_matrix_from_shuffled_data(extracted_data.activity_matrix)
+
+    adjacency_matrix -= shuffled_adjacency_matrix
     visualiser = SubnetworkVisualiser(region)
     visualiser.create_heatmap_from_adjacency_matrix(adjacency_matrix)
 
@@ -32,4 +35,4 @@ def identify_network_and_visualise(region):
 
 
 if __name__ == "__main__":
-    identify_network_and_visualise("VISam")
+    identify_network_and_visualise("ACA")

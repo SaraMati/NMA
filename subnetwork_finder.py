@@ -41,6 +41,12 @@ class SubnetworkFinder:
         return transformed_upper_half.columns[(transformed_upper_half == True).any(axis=1)], transformed_upper_half
 
     @staticmethod
+    def find_adjacency_matrix_from_shuffled_data(activity_matrix):
+        activity_matrix = activity_matrix.apply(lambda x: np.random.shuffle(x) or x, axis=1)
+        baseline_adjacency_matrix = SubnetworkFinder.find_network_by_linear_correlation_full_window(activity_matrix)
+        return baseline_adjacency_matrix
+
+    @staticmethod
     def find_network_by_linear_correlation_full_window(activity_matrix):
         """
         Method to find the neurons in this area which are correlated in
