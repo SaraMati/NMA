@@ -31,8 +31,8 @@ def identify_network_and_visualise(region):
                                                                 ".csv")
     visualiser.create_histogram_of_cell_types(cells_with_type)
 
-    visualiser.create_graph_diagram(cell_network, cells_with_type)
+    visualiser.create_graph_diagram(cell_network, cells_with_type, False)
 
 
 if __name__ == "__main__":
-    identify_network_and_visualise("ACA")
+    identify_network_and_visualise("VISam")

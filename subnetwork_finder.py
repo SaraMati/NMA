@@ -37,7 +37,6 @@ class SubnetworkFinder:
 
         # transformed_upper_half now has true when there is an 'above-threshold' connection
         # between neurons
-
         return transformed_upper_half.columns[(transformed_upper_half == True).any(axis=1)], transformed_upper_half
 
     @staticmethod
@@ -97,47 +96,36 @@ class SubnetworkVisualiser:
         sns.catplot(x="Cell_type", kind="count", palette="ch:.25", data=cells_with_extra_info)  #.set_title(self.region)
         plt.show()
 
-    # TODO: want to finish this off so that we colour code the nodes by cell type
-    # which means figuring out how networkx works
-    def create_graph_diagram(self, thresholded_adjacency_matrix, cells_with_type):
+    def create_graph_diagram(self, thresholded_adjacency_matrix, cells_with_type, include_below_threshold=True):
+
+        if not include_below_threshold:
+            thresholded_adjacency_matrix = thresholded_adjacency_matrix[(thresholded_adjacency_matrix == True).any(axis=1)]
 
         # Create the graph without isolates
         g = nx.from_pandas_adjacency(thresholded_adjacency_matrix)
         g.remove_nodes_from(list(nx.isolates(g)))
 
-        # Find all of the cell types for colour scheme
-        cell_groups = cells_with_type['Cell_type'].unique()
-        mapping = dict(zip(sorted(cell_groups), count()))
+        # TODO: shouldn't be hardcoded but just generate a map of colours
+        # for the unique values in cells_with_type
+        cell_types_per_neuron = cells_with_type['Cell_type']
+        colour_map = []
+        for neuron_index in g.nodes():
+            try:
+                cell_type = cell_types_per_neuron[neuron_index]
+                if cell_type == 'Narrow Interneuron':
+                    colour_map.append('blue')
+                elif cell_type == 'Wide Interneuron':
+                    colour_map.append('green')
+                elif cell_type == 'Pyramidal Cell':
+                    colour_map.append('yellow')
 
-        nodes = g.nodes()
-        #colours = [mapping[g.nodes[n].n] for n in nodes]
+            except KeyError as e:
+                # If the neuron exists but does not pass the threshold
+                colour_map.append('grey')
 
-        color_lookup = {k: v for v, k in enumerate(sorted(set(g.nodes())))}
-        low, *_, high = sorted(color_lookup.values())
-        norm = mpl.colors.Normalize(vmin=low, vmax=high, clip=True)
-        mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
-
-        nx.draw(g, with_labels=True, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+        nx.draw(g, with_labels=True, node_color=colour_map)
         plt.show()
 
-        """
-        import matplotlib.pyplot as plt
-        # create number for each group to allow use of colormap
-        from itertools import count
-        # get unique groups
-        groups = set(nx.get_node_attributes(g,'group').values())
-        mapping = dict(zip(sorted(groups),count()))
-        
-        nodes = g.nodes()
-        colors = [mapping[g.node[n]['group']] for n in nodes]
-        
-        # drawing nodes and edges separately so we can capture collection for colobar
-        pos = nx.spring_layout(g)
-        ec = nx.draw_networkx_edges(g, pos, alpha=0.2)
-        nc = nx.draw_networkx_nodes(g, pos, nodelist=nodes, node_color=colors, 
-                                    with_labels=False, node_size=100, cmap=plt.cm.jet)
-        plt.colorbar(nc)
-        plt.axis('off')
-        plt.show()"""
+
 
 
