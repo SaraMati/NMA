@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import rcParams 
 from matplotlib import pyplot as plt
+import seaborn as sns
+%matplotlib
 
 fname = []
 for j in range(3):
@@ -148,7 +150,7 @@ dat_WAV = all_dat_WAV[session_number]
 dat_ST = all_dat_ST[session_number]
 
 all_trials_window_spikes = {} # creates dict of dicts
-all_trials_window_counts = {}
+all_trials_window_counts = pd.DataFrame()
 
 # gets spike times and counts for all neurons in all trials for region of interest
 
@@ -156,23 +158,46 @@ for trial_number in range(len(dat['response_time'])):
 
     # for all neurons, extract spike counts in the window [t-100ms, t], where t is the response time
     trial_response_time = dat['response_time'][trial_number] # response time for the first trial
-    pre_move_window_start = trial_response_time - 0.1
+    pre_move_window_start = -1 #trial_response_time - 0.1
 
     all_spike_times = dat_ST['ss'][dat['brain_area']==region][:,trial_number] # spike times for the first trial in all neurons
 
     all_spikes_in_window = []
     all_counts_in_window = []
     neuron_ids = np.where(dat['brain_area']==region)[0]
+    all_trials_window_counts[trial_number] = len(dat['response_time'])
 
     for cell in range(len(all_spike_times)):
-        mask = np.logical_and(all_spike_times[cell] >= pre_move_window_start, all_spike_times[cell] <= trial_response_time)
+        mask = np.logical_and(all_spike_times[cell] >= pre_move_window_start, all_spike_times[cell] <= 4 )#trial_response_time)
         cell_window_counts = np.sum(mask)
         cell_window_spikes = all_spike_times[cell][mask]
         all_counts_in_window.append(cell_window_counts)
         all_spikes_in_window.append(cell_window_spikes)
   
     one_trial_window_spikes = dict(zip(neuron_ids, all_spikes_in_window)) # each cells is a key in nested dict
-    one_trial_window_counts = dict(zip(neuron_ids, all_counts_in_window))
+    all_trials_window_counts[trial_number] = all_counts_in_window
+    all_trials_window_counts.index = neuron_ids
 
     all_trials_window_spikes[trial_number] = one_trial_window_spikes # each trial is a dict in the dict
-    all_trials_window_counts[trial_number] = one_trial_window_counts
+    #all_trials_window_counts[trial_number] = one_trial_window_counts
+
+
+
+
+lists = sorted(all_trials_window_spikes[300].items()) #flatten dictionary for plotting
+x, y = zip(*lists)
+plt.eventplot(y, 'horizontal', color='k')
+plt.axvline(x=0.5, color='r', linestyle='--')
+plt.axvline(x=dat['response_time'][300], color ='b', linestyle='--')
+plt.xlabel('Time (s)')
+plt.ylabel('Cell number')
+
+
+adjacency_matrix = all_trials_window_counts.T.corr()
+
+sns.heatmap(adjacency_matrix,
+  fmt='.1g',
+  vmin=-1, vmax=1, center=0,
+  cmap='coolwarm',
+  yticklabels=True, xticklabels=True).set_title(region)
+plt.show()
