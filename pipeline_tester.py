@@ -1,19 +1,9 @@
 from curated_data_loader import *
 from subnetwork_finder import *
 
-if __name__ == "__main__":
 
-    region = "VISam"
+def identify_network_and_visualise(region):
     extracted_data = CuratedDataLoader().spikes_in_decision_time_per_neuron(region)
-    """data = CuratedDataLoader.spike_trains_decision_time_per_neuron(region)
-
-    finder = SubnetworkFinder()
-
-    adjacency_matrices_all_bins = list()
-    for activity_for_bin in data.activity_matrices:
-        adjacency_matrices_all_bins.append(finder.find_network_by_linear_correlation_full_window(activity_for_bin))
-
-    averaged_across_bins = sum(adjacency_matrices_all_bins)/len(data.activity_matrices)"""
 
     finder = SubnetworkFinder()
     adjacency_matrix = finder.find_network_by_linear_correlation_full_window(extracted_data.activity_matrix)
@@ -22,14 +12,24 @@ if __name__ == "__main__":
     visualiser = SubnetworkVisualiser(region)
     visualiser.create_heatmap_from_adjacency_matrix(adjacency_matrix)
 
-    cells = finder.find_functional_subnetwork(adjacency_matrix)
-    cells_in_network = CuratedDataLoader.neuron_id_to_cell_type(cells,
+    threshold = 95
+    print("Percentile Threshold " + str(threshold))
+    cells, cell_network = finder.find_functional_subnetwork(adjacency_matrix, threshold)
+
+    count_in_network = len(cells)
+    print("Number of cells in subnetwork " + str(count_in_network))
+    all_cell_count = len(adjacency_matrix)
+    print("Number of cells in original recording from that region " + str(all_cell_count))
+    print("% of measured cells identified as being in the network " + str(count_in_network/all_cell_count*100))
+    cells_with_type = CuratedDataLoader.neuron_id_to_cell_type(cells,
                                                                 "data/CellMeasures_" +
                                                                 extracted_data.session.mouse_name + "_" +
                                                                 extracted_data.session.session_date +
                                                                 ".csv")
+    visualiser.create_histogram_of_cell_types(cells_with_type)
 
-    visualiser.create_histogram_of_cell_types(cells_in_network)
+    visualiser.create_graph_diagram(cell_network, cells_with_type)
 
-    # TODO: 1) what types of cells are in each network how does that vary per region
-    # 2) visualise the actual networks with weighted edges and annotated with cell type
+
+if __name__ == "__main__":
+    identify_network_and_visualise("VISam")
