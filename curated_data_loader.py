@@ -34,14 +34,15 @@ class SessionDataForRegion:
     def set_session_info(self, info):
         self.session = info
 
+    def session(self):
+        return self.session.mouse_name + "_" + self.session.session_date
+
 
 class CuratedDataLoader:
     """
     Class to load the data in the same way as is done in
     https://colab.research.google.com/github/NeuromatchAcademy/course-content/blob/master/projects/load_steinmetz_decisions.ipynb
     """
-    session_number = 11
-
     class DataForRegion:
         """
         Data holder class for use during data extraction
@@ -56,22 +57,18 @@ class CuratedDataLoader:
             self.response_bins_for_neurons = response_bins_for_neurons
             self.spikes_for_neurons = spikes_for_neurons
 
-    def __init__(self):
+    def __init__(self, session_number=11):
         self.bin_size_ms = -1
         self.number_of_bins_for_analysis = -1
+        self.session_number = session_number
 
     @staticmethod
     def neuron_id_to_cell_type(neuron_ids, path_to_cell_type_csv):
-
         cell_type_df = pd.read_csv(path_to_cell_type_csv)
-        #matching_cells = cell_type_df[cell_type_df.isin(neuron_ids)]
-        matching_cells = cell_type_df[cell_type_df.index.isin(neuron_ids)]
-        i = 0
+        return cell_type_df[cell_type_df.index.isin(neuron_ids)]
 
-        return matching_cells
-
-    def spike_trains_decision_time_per_neuron(self, region, decision_time=100):
-        neuron_data, session_info = self.load_session(region, decision_time)
+    def spike_trains_decision_time_per_neuron(self, region, downloaded_data, decision_time=100):
+        neuron_data, session_info = self.load_session(region, downloaded_data, decision_time)
 
         df_list = [pd.DataFrame() for x in range(self.number_of_bins_for_analysis)]
 
@@ -98,8 +95,8 @@ class CuratedDataLoader:
         data.set_session_info(session_info)
         return data
 
-    def spikes_in_decision_time_per_neuron(self, region, decision_time=100):
-        neuron_data, session_info = self.load_session(region, decision_time)
+    def spikes_in_decision_time_per_neuron(self, region, downloaded_data, decision_time=100):
+        neuron_data, session_info = self.load_session(region, downloaded_data, decision_time)
 
         activity_matrix = pd.DataFrame()
         for trial in range(neuron_data.spikes_for_neurons.shape[1]):
@@ -122,15 +119,8 @@ class CuratedDataLoader:
         data.set_session_info(session_info)
         return data
 
-    @staticmethod
-    def neurons_with_total_spike_count(region):
-
-        fname = CuratedDataLoader.download_data()
-        alldat = np.array([])
-        for j in range(len(fname)):
-            alldat = np.hstack((alldat, np.load('steinmetz_part%d.npz' % j, allow_pickle=True)['dat']))
-
-        dat = alldat[CuratedDataLoader.session_number]
+    def neurons_with_total_spike_count(self, region, downloaded_data):
+        dat = downloaded_data[self.session_number]
 
         neurons_with_brain_areas = dat['brain_area']
         indexes_for_neurons_in_region = np.where(neurons_with_brain_areas == region)[0]
@@ -143,13 +133,8 @@ class CuratedDataLoader:
         counts = pd.Series(spike_counts_per_neuron_across_all_trials, index=indexes_for_neurons_in_region)
         return counts
 
-    def load_session(self, region, decision_time):
-        fname = CuratedDataLoader.download_data()
-        alldat = np.array([])
-        for j in range(len(fname)):
-            alldat = np.hstack((alldat, np.load('steinmetz_part%d.npz' % j, allow_pickle=True)['dat']))
-
-        dat = alldat[CuratedDataLoader.session_number]
+    def load_session(self, region, downloaded_data, decision_time):
+        dat = downloaded_data[self.session_number]
 
         neurons_with_brain_areas = dat['brain_area']
         indexes_for_neurons_in_region = np.where(neurons_with_brain_areas == region)[0]
@@ -169,7 +154,7 @@ class CuratedDataLoader:
         spikes_for_neurons_in_region = spike_data[indexes_for_neurons_in_region]
 
         info = SessionDataForRegion.SessionInfo()
-        info.index_in_curated_data = CuratedDataLoader.session_number
+        info.index_in_curated_data = self.session_number
         info.mouse_name = dat['mouse_name']
         info.session_date = dat['date_exp']
 
@@ -179,15 +164,15 @@ class CuratedDataLoader:
 
     @staticmethod
     def download_data():
-        fname = []
+        fnames = []
         for j in range(3):
-            fname.append('steinmetz_part%d.npz' % j)
+            fnames.append('steinmetz_part%d.npz' % j)
         url = ["https://osf.io/agvxh/download"]
         url.append("https://osf.io/uv3mw/download")
         url.append("https://osf.io/ehmw2/download")
 
         for j in range(len(url)):
-            if not os.path.isfile(fname[j]):
+            if not os.path.isfile(fnames[j]):
                 try:
                     r = requests.get(url[j])
                 except requests.ConnectionError:
@@ -196,6 +181,22 @@ class CuratedDataLoader:
                     if r.status_code != requests.codes.ok:
                         print("!!! Failed to download data !!!")
                     else:
-                        with open(fname[j], "wb") as fid:
+                        with open(fnames[j], "wb") as fid:
                             fid.write(r.content)
-        return fname
+         # TODO: create the giant array in here because that's the slow part so only want to do once
+        alldat = np.array([])
+        for j in range(len(fnames)):
+            alldat = np.hstack((alldat, np.load('steinmetz_part%d.npz' % j, allow_pickle=True)['dat']))
+        return alldat
+
+    @staticmethod
+    def indexes_of_sessions_for_mouse(mouse_name, downloaded_data):
+        index = 0
+        matching_indexes = list()
+        for session in downloaded_data:
+            if session['mouse_name'] == mouse_name:
+                matching_indexes.append(index)
+            index += 1
+
+        return matching_indexes
+

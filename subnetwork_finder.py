@@ -1,20 +1,15 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import networkx as nx
 
 import numpy as np
 from scipy import stats
-from itertools import count
 import math
 
 
 class SubnetworkFinder:
     """
     Class to detect and visualise functional networks in specific regions
-
-    Methods:
-
     """
     @staticmethod
     def above_percentile(cell_value, flattened_matrix, percentile):
@@ -37,6 +32,23 @@ class SubnetworkFinder:
         # transformed_upper_half now has true when there is an 'above-threshold' connection
         # between neurons
         return transformed_upper_half.columns[(transformed_upper_half == True).any(axis=1)], transformed_upper_half
+
+    @staticmethod
+    def create_graph_of_network(thresholded_adjacency_matrix, include_below_threshold):
+        """
+        Given the thresholded adjacency matrix, transforms into networkx and removes isolates
+        :param thresholded_adjacency_matrix:
+        :param include_below_threshold:
+        :return: networkx graph
+        """
+        if not include_below_threshold:
+            thresholded_adjacency_matrix = \
+                thresholded_adjacency_matrix[(thresholded_adjacency_matrix == True).any(axis=1)]
+
+            # Create the graph without isolates
+        g = nx.from_pandas_adjacency(thresholded_adjacency_matrix)
+        g.remove_nodes_from(list(nx.isolates(g)))
+        return g
 
     @staticmethod
     def get_upper_half_of_adjacency_matrix(adjacency_matrix):
@@ -128,14 +140,7 @@ class SubnetworkVisualiser:
 
     def create_graph_diagram(self, thresholded_adjacency_matrix, cells_with_type, include_below_threshold=True):
 
-        if not include_below_threshold:
-            thresholded_adjacency_matrix =\
-                thresholded_adjacency_matrix[(thresholded_adjacency_matrix == True).any(axis=1)]
-
-        # Create the graph without isolates
-        g = nx.from_pandas_adjacency(thresholded_adjacency_matrix)
-        g.remove_nodes_from(list(nx.isolates(g)))
-
+        g = SubnetworkFinder.create_graph_of_network(thresholded_adjacency_matrix, include_below_threshold)
         # TODO: shouldn't be hardcoded but just generate a map of colours
         # for the unique values in cells_with_type
         cell_types_per_neuron = cells_with_type['Cell_type']
@@ -153,7 +158,8 @@ class SubnetworkVisualiser:
             except KeyError as e:
                 # If the neuron exists but does not pass the threshold
                 colour_map.append('grey')
-
+        plt.figure()
+        plt.title(self.region)
         nx.draw(g, with_labels=True, node_color=colour_map)
         plt.show()
 
