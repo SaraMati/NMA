@@ -34,9 +34,6 @@ class SessionDataForRegion:
     def set_session_info(self, info):
         self.session = info
 
-    def session(self):
-        return self.session.mouse_name + "_" + self.session.session_date
-
 
 class CuratedDataLoader:
     """
