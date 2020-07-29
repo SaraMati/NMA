@@ -123,6 +123,8 @@ class SubnetworkAnalysis:
 
 if __name__ == "__main__":
     #SubnetworkAnalysis.identify_network_and_visualise("VISam")
-    SubnetworkAnalysis.identify_subnetwork_across_sessions(["VISam", "ACA", "MOs", "PL", "MOp", "SSp", "APN"])
 
+    regions = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl", "ACA", "AUD", "COA", "DP", "ILA", "MOp", "MOs", "OLF", "ORB", "ORBm", "PIR", "PL", "SSp", "SSs", "RSP", "TT"]
+    six_regions = ["VISam", "ACA", "MOs", "PL", "MOp", "SSp", "APN"]
+    SubnetworkAnalysis.identify_subnetwork_across_sessions(regions)
 
