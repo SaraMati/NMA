@@ -17,6 +17,7 @@ import pandas as pd
 from matplotlib import rcParams 
 from matplotlib import pyplot as plt
 import seaborn as sns
+import elephant
 %matplotlib
 
 fname = []
@@ -158,7 +159,7 @@ for trial_number in range(len(dat['response_time'])):
 
     # for all neurons, extract spike counts in the window [t-100ms, t], where t is the response time
     trial_response_time = dat['response_time'][trial_number] # response time for the first trial
-    pre_move_window_start = -1 #trial_response_time - 0.1
+    pre_move_window_start = trial_response_time - 0.1
 
     all_spike_times = dat_ST['ss'][dat['brain_area']==region][:,trial_number] # spike times for the first trial in all neurons
 
@@ -168,7 +169,7 @@ for trial_number in range(len(dat['response_time'])):
     all_trials_window_counts[trial_number] = len(dat['response_time'])
 
     for cell in range(len(all_spike_times)):
-        mask = np.logical_and(all_spike_times[cell] >= pre_move_window_start, all_spike_times[cell] <= 4 )#trial_response_time)
+        mask = np.logical_and(all_spike_times[cell] >= pre_move_window_start, all_spike_times[cell] <= trial_response_time)
         cell_window_counts = np.sum(mask)
         cell_window_spikes = all_spike_times[cell][mask]
         all_counts_in_window.append(cell_window_counts)
@@ -180,6 +181,98 @@ for trial_number in range(len(dat['response_time'])):
 
     all_trials_window_spikes[trial_number] = one_trial_window_spikes # each trial is a dict in the dict
     #all_trials_window_counts[trial_number] = one_trial_window_counts
+
+decision_time = 100
+
+response_t = dat['response_time']
+response_t_ms = response_t * 1000
+
+bin_size_ms = dat['bin_size'] * 1000  # 10ms
+
+# Bin in which the response occurs for all of the neurons in the region
+response_t_bins = (response_t_ms / bin_size_ms)
+response_t_bins = np.ceil(response_t_bins).astype(int)
+number_of_bins_for_analysis = int(decision_time / bin_size_ms)
+
+
+trial_summed_spike_counts = np.sum(all_trials_window_counts.T, axis=1) #total spike counts in 100 ms decision window
+trial_summed_spike_counts = np.asarray(trial_summed_spike_counts)
+
+avg_pupil_areas_in_decision = []
+
+for trial_number in range(len(dat['response_time'])):
+  pupil_areas_in_decision = dat['pupil'][0][trial_number][int(response_t_bins[trial_number])-number_of_bins_for_analysis:int(response_t_bins[trial_number])]
+  avg_pupil_area = np.mean(pupil_areas_in_decision)
+  avg_pupil_areas_in_decision.append(avg_pupil_area)
+
+y_response = dat['response']
+
+x_array = pd.DataFrame()
+x_array['pupil_area'] = avg_pupil_areas_in_decision
+x_array['total_spk_counts'] = trial_summed_spike_counts
+
+
+
+def make_design_matrix(x):
+  """Create the design matrix of inputs for use in polynomial regression
+  
+  Args:
+    x (ndarray): input vector of shape (samples,) 
+    order (scalar): polynomial regression order
+  Returns:
+    ndarray: design matrix for polynomial regression of shape (samples, order+1)
+  """
+
+  # Broadcast to shape (n x 1) so dimensions work 
+  if x.ndim == 1:
+    x = x[:, None]
+
+  #if x has more than one feature, we don't want multiple columns of ones so we assign
+  # x^0 here
+  design_matrix = pd.DataFrame(np.ones((x.shape[0], 1))) 
+  design_matrix = pd.concat([design_matrix, x], axis=1)
+
+  return design_matrix
+
+X = make_design_matrix(x_array)
+
+
+from sklearn.linear_model import LogisticRegression
+
+log_reg = LogisticRegression(penalty="none")
+log_reg.fit(X, y_response)
+y_pred = log_reg.predict(X)
+
+
+
+def compute_accuracy(X, y, model):
+  """Compute accuracy of classifier predictions.
+  
+  Args:
+    X (2D array): Data matrix
+    y (1D array): Label vector
+    model (sklearn estimator): Classifier with trained weights.
+
+  Returns:
+    accuracy (float): Proportion of correct predictions.  
+  """
+  #############################################################################
+  # TODO Complete the function, then remove the next line to test it
+  # raise NotImplementedError("Implement the compute_accuracy function")
+  #############################################################################
+
+  y_pred = model.predict(X)
+  accuracy = np.mean(y_pred == y)
+
+  return accuracy
+
+# Uncomment and run to test your function:
+train_accuracy = compute_accuracy(X, y_response, log_reg)
+print(f"Accuracy on the training data: {train_accuracy:.2%}")
+
+
+# instead of using all the cells in VISam, use all the cells from the subnetworks we've identified
+
 
 
 
@@ -201,3 +294,61 @@ sns.heatmap(adjacency_matrix,
   cmap='coolwarm',
   yticklabels=True, xticklabels=True).set_title(region)
 plt.show()
+
+test_train = all_trials_window_spikes[0][637]
+
+one_trial_isi = []
+for cell in neuron_ids:
+  if len(all_trials_window_spikes[0][cell] >= 2:
+    isi = np.diff(all_trials_window_spikes[0][cell]
+  else:
+    isi = np.nan
+)
+
+
+auto_corr = np.correlate(test_train, test_train, mode="full")
+auto_corr = auto_corr[auto_corr.size//2:]
+
+
+isi = np.diff(test_train)
+
+
+
+'''
+jane test
+'''
+
+from curated_data_loader import *
+from subnetwork_finder import *
+
+if __name__ == "__main__":
+
+    region = "VISam"
+    extracted_data = CuratedDataLoader().spikes_in_decision_time_per_neuron(region)
+    """data = CuratedDataLoader.spike_trains_decision_time_per_neuron(region)
+
+    finder = SubnetworkFinder()
+
+    adjacency_matrices_all_bins = list()
+    for activity_for_bin in data.activity_matrices:
+        adjacency_matrices_all_bins.append(finder.find_network_by_linear_correlation_full_window(activity_for_bin))
+
+    averaged_across_bins = sum(adjacency_matrices_all_bins)/len(data.activity_matrices)"""
+
+    finder = SubnetworkFinder()
+    adjacency_matrix = finder.find_network_by_linear_correlation_full_window(extracted_data.activity_matrix)
+    # TODO: other measures of the graph - clustering coefficient? characteristic path length?
+
+    visualiser = SubnetworkVisualiser(region)
+    visualiser.create_heatmap_from_adjacency_matrix(adjacency_matrix)
+
+    cells = finder.find_functional_subnetwork(adjacency_matrix)
+    cells_in_network = CuratedDataLoader.neuron_id_to_cell_type(cells,
+                                                                "data/CellMeasures_" +
+                                                                extracted_data.session.mouse_name + "_" +
+                                                                extracted_data.session.session_date +
+                                                                ".csv")
+
+    visualiser.create_histogram_of_cell_types(cells_in_network)
+
+# %%
