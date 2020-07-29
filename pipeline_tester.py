@@ -7,20 +7,18 @@ import networkx as nx
 class SubnetworkAnalysis:
 
     @staticmethod
-    def identify_subnetwork_across_sessions(region):
+    def identify_subnetwork_across_sessions(regions):
         """
-        Extract the functional subnetwork for the region across sessions
+        Extract the functional subnetwork for the regions across sessions
         Analyse the putative subnetwork (e.g. using graph features)
         Compare the networks across sessions
-        :param region:
-        :param sessions:
+        :param regions:
         :return:
         """
 
         downloaded_data = CuratedDataLoader.download_data()
-        session_indexes = CuratedDataLoader.indexes_of_sessions_for_mouse("Lederberg", downloaded_data)
-        print(session_indexes)
-        threshold = 90
+        mouse_name = "Lederberg"
+        session_indexes = CuratedDataLoader.indexes_of_sessions_for_mouse(mouse_name, downloaded_data)
 
         # Proportion_Pyr = number of cells that are pyramidal cells in the identified network
         # Proportion_Wide_IN etc
@@ -33,36 +31,37 @@ class SubnetworkAnalysis:
                                        'Prop_Narrow_IN',
                                        'Mean_Degree',
                                        'Clustering_Coeff'])
+        threshold = 90
         for session in session_indexes:
-            extracted_data = CuratedDataLoader(session).spikes_in_decision_time_per_neuron(region, downloaded_data)
-            finder = SubnetworkFinder()
-            adjacency_matrix = finder.find_network_by_linear_correlation_full_window(extracted_data.activity_matrix)
-            shuffled_adjacency_matrix = finder.find_adjacency_matrix_from_shuffled_data(extracted_data.activity_matrix)
-            adjacency_matrix -= shuffled_adjacency_matrix
+            for region in regions:
+                extracted_data = CuratedDataLoader(session).spikes_in_decision_time_per_neuron(region, downloaded_data)
+                finder = SubnetworkFinder()
+                adjacency_matrix = finder.find_network_by_linear_correlation_full_window(extracted_data.activity_matrix)
+                shuffled_adjacency_matrix = finder.find_adjacency_matrix_from_shuffled_data(extracted_data.activity_matrix)
+                adjacency_matrix -= shuffled_adjacency_matrix
 
-            cells, cell_network = finder.find_functional_subnetwork(adjacency_matrix, threshold)
-            g = finder.create_graph_of_network(cell_network, threshold)
+                cells, cell_network = finder.find_functional_subnetwork(adjacency_matrix, threshold)
+                g = finder.create_graph_of_network(cell_network, threshold)
 
-            proportion_cells = SubnetworkAnalysis.proportion_cells_in_subnetwork(adjacency_matrix, cells)
-            print("PROPORTION CELLS " + str(proportion_cells))
-            cell_type_props = SubnetworkAnalysis.proportion_cell_types_in_subnetwork(cells, extracted_data.session)
+                proportion_cells = SubnetworkAnalysis.proportion_cells_in_subnetwork(adjacency_matrix, cells)
+                cell_type_props = SubnetworkAnalysis.proportion_cell_types_in_subnetwork(cells, extracted_data.session)
 
-            mean_degree = sum(dict(g.degree()).values())/float(len(g)) if len(g) > 0 else 0
-            clustering_coeff = nx.average_clustering(g) if len(g) > 0 else 0
-            new_row = pd.Series([
-                    extracted_data.session.mouse_name + "_" + extracted_data.session.session_date,
-                    region,
-                    np.array_str(cells),
-                    proportion_cells,
-                    SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Pyramidal Cell'),
-                    SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Wide Interneuron'),
-                    SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Narrow Interneuron'),
-                    mean_degree,
-                    clustering_coeff
-                ], index=output.columns)
-            output = output.append(new_row, ignore_index=True)
+                mean_degree = sum(dict(g.degree()).values())/float(len(g)) if len(g) > 0 else 0
+                clustering_coeff = nx.average_clustering(g) if len(g) > 0 else 0
+                new_row = pd.Series([
+                        extracted_data.session.mouse_name + "_" + extracted_data.session.session_date,
+                        region,
+                        np.array_str(cells),
+                        proportion_cells,
+                        SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Pyramidal Cell'),
+                        SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Wide Interneuron'),
+                        SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Narrow Interneuron'),
+                        mean_degree,
+                        clustering_coeff
+                    ], index=output.columns)
+                output = output.append(new_row, ignore_index=True)
 
-        output.to_csv("all_sessions")
+        output.to_csv(mouse_name + "_all_sessions")
 
     @staticmethod
     def identify_network_and_visualise(region):
@@ -124,7 +123,6 @@ class SubnetworkAnalysis:
 
 if __name__ == "__main__":
     #SubnetworkAnalysis.identify_network_and_visualise("VISam")
+    SubnetworkAnalysis.identify_subnetwork_across_sessions(["VISam", "ACA", "MOs", "PL", "MOp", "SSp", "APN"])
 
-
-    SubnetworkAnalysis.identify_subnetwork_across_sessions("VISam")
 
