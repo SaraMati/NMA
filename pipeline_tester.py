@@ -66,7 +66,7 @@ class SubnetworkAnalysis:
                     ], index=output.columns)
                 output = output.append(new_row, ignore_index=True)
 
-        output.to_csv(mouse_name + "_all_sessions")
+        output.to_csv(mouse_name + "_all_sessions.csv")
         return output
 
     @staticmethod
@@ -130,11 +130,10 @@ class SubnetworkAnalysis:
 if __name__ == "__main__":
     #SubnetworkAnalysis.identify_network_and_visualise("VISam")
 
-    regions = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl", "ACA", "AUD", "COA", "DP", "ILA", "MOp", "MOs", "OLF", "ORB", "ORBm", "PIR", "PL", "SSp", "SSs", "RSP", "TT",
-               "CL", "LD", "LGd", "LH", "LP", "MD", "MG", "PO", "POL", "PT", "RT", "SPF", "TH", "VAL", "VPL", "VPM", "CA", "CA1", "CA2", "CA3", "DG", "SUB", "POST",
-               "APN", "IC", "MB", "MRN", "NB", "PAG", "RN", "SCs", "SCm", "SCig", "SCsg", "ZI", "ACB", "CP", "GPe", "LS", "LSc", "LSr", "MS", "OT", "SNr", "SI"]
+    regions = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl", "ACA", "AUD", "COA", "DP", "ILA", "MOp", "MOs", "OLF", "ORB", "ORBm", "PIR", "PL", "SSp", "SSs", "RSP", "TT"]
     output = SubnetworkAnalysis.identify_subnetwork_across_sessions(regions)
-    #output = pd.read_csv("Lederberg_all_sessions")
+    #output = pd.read_csv("Lederberg_all_sessions.csv")
     # TODO: differentiate whether there were no measured cells or whether it just didn't reach threshold
     perform_t_sne_on_subnetworks(output)
+
 
