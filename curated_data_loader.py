@@ -65,8 +65,9 @@ class CuratedDataLoader:
         return cell_type_df[cell_type_df.index.isin(neuron_ids)]
 
     @staticmethod
-    def all_neurons_with_types(neuron_ids, path_to_cell_type_csv):
+    def all_neurons_with_types(region, neuron_ids, path_to_cell_type_csv):
         cell_type_df = pd.read_csv(path_to_cell_type_csv)
+        cell_type_df = cell_type_df[cell_type_df['Brain_region'] == region]
         cell_type_df['Subnetwork'] = 0
         cell_type_df['Subnetwork'].loc[neuron_ids] = 1
 

@@ -102,7 +102,8 @@ class SubnetworkAnalysis:
                     continue
                 print("Number of cells in original recording from that region " + str(all_cell_count))
                 print("% of measured cells identified as being in the network " + str(count_in_network/all_cell_count*100))
-                cells_with_type = CuratedDataLoader.all_neurons_with_types(cells,
+                cells_with_type = CuratedDataLoader.all_neurons_with_types(region,
+                                                                            cells,
                                                                             "data/CellMeasures_" +
                                                                             extracted_data.session.mouse_name + "_" +
                                                                             extracted_data.session.session_date +
