@@ -64,6 +64,14 @@ class CuratedDataLoader:
         cell_type_df = pd.read_csv(path_to_cell_type_csv)
         return cell_type_df[cell_type_df.index.isin(neuron_ids)]
 
+    @staticmethod
+    def all_neurons_with_types(neuron_ids, path_to_cell_type_csv):
+        cell_type_df = pd.read_csv(path_to_cell_type_csv)
+        cell_type_df['Subnetwork'] = 0
+        cell_type_df['Subnetwork'].loc[neuron_ids] = 1
+
+        return cell_type_df
+
     def spike_trains_decision_time_per_neuron(self, region, downloaded_data, decision_time=100):
         neuron_data, session_info = self.load_session(region, downloaded_data, decision_time)
 

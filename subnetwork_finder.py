@@ -98,15 +98,16 @@ class SubnetworkVisualiser:
     """
     Class to create visualisations for a region
     """
-    def __init__(self, region):
+    def __init__(self, region, session):
         self.region = region
+        self.session = session
 
     def create_heatmap_from_adjacency_matrix(self, adjacency_matrix):
         sns.heatmap(adjacency_matrix,
                     fmt='.1g',
                     vmin=-1, vmax=1, center=0,
                     cmap='coolwarm',
-                    yticklabels=True, xticklabels=True).set_title(self.region)
+                    yticklabels=True, xticklabels=True).set_title(self.region + "_" + self.session.session_date)
         plt.show()
 
     def create_histogram_of_correlations(self, adjacency_matrix, percentile):
@@ -121,6 +122,9 @@ class SubnetworkVisualiser:
         :param percentile: use this to display a line of where the percentile is falling
         :return:
         """
+        if len(adjacency_matrix) < 1:
+            return
+
         upper_half = SubnetworkFinder.get_upper_half_of_adjacency_matrix(adjacency_matrix)
         all_pearson_values = upper_half.to_numpy().flatten()
         all_pearson_values = all_pearson_values[~np.isnan(all_pearson_values)]
@@ -128,13 +132,13 @@ class SubnetworkVisualiser:
         point_for_vertical_line = np.quantile(all_pearson_values, percentile/100)
 
         plot = sns.distplot(all_pearson_values)
-        plot.set(title=self.region, xlabel='Pearson Correlation Coefficient', ylabel='Count')
+        plot.set(title=self.region + "_" + self.session.session_date, xlabel='Pearson Correlation Coefficient', ylabel='Count')
         plot.axvline(point_for_vertical_line, color='red')
         plot.text(point_for_vertical_line, 0, str(percentile) + ' percentile', rotation=90)
         plt.show()
 
-    def create_histogram_of_cell_types(self, cells_with_extra_info):
-        histogram = sns.catplot(x="Cell_type", kind="count", palette="ch:.25", data=cells_with_extra_info)
+    def create_histogram_of_cell_types(self, cells_with_type):
+        histogram = sns.catplot(x="Cell_type", kind="count", palette="ch:.25", data=cells_with_type, hue="Subnetwork")
         histogram.fig.suptitle(self.region)
         plt.show()
 
@@ -159,7 +163,7 @@ class SubnetworkVisualiser:
                 # If the neuron exists but does not pass the threshold
                 colour_map.append('grey')
         plt.figure()
-        plt.title(self.region)
+        plt.title(self.region + "_" + self.session.session_date)
         nx.draw(g, with_labels=True, node_color=colour_map)
         plt.show()
 
