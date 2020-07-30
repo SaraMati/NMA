@@ -56,7 +56,7 @@ class SubnetworkAnalysis:
                 new_row = pd.Series([
                         extracted_data.session.mouse_name + "_" + extracted_data.session.session_date,
                         region,
-                        cells,
+                        np.array(cells),
                         proportion_cells,
                         SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Pyramidal Cell'),
                         SubnetworkAnalysis.proportion_cell_type(cell_type_props, 'Wide Interneuron'),
@@ -89,8 +89,8 @@ class SubnetworkAnalysis:
                 adjacency_matrix -= shuffled_adjacency_matrix
                 visualiser = SubnetworkVisualiser(region, extracted_data.session)
 
-                visualiser.create_histogram_of_correlations(adjacency_matrix, threshold)
-                #visualiser.create_heatmap_from_adjacency_matrix(adjacency_matrix)
+                #visualiser.create_histogram_of_correlations(adjacency_matrix, threshold)
+                visualiser.create_heatmap_from_adjacency_matrix(adjacency_matrix)
 
                 cells, cell_network = finder.find_functional_subnetwork(adjacency_matrix, threshold)
 
