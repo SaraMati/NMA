@@ -1,5 +1,6 @@
 from curated_data_loader import *
 from subnetwork_finder import *
+from subnetwork_comparison import *
 
 import networkx as nx
 
@@ -37,6 +38,10 @@ class SubnetworkAnalysis:
                 extracted_data = CuratedDataLoader(session).spikes_in_decision_time_per_neuron(region, downloaded_data)
                 finder = SubnetworkFinder()
                 adjacency_matrix = finder.find_network_by_linear_correlation_full_window(extracted_data.activity_matrix)
+
+                # TODO: instead record this in the output
+                if len(adjacency_matrix) < 1:
+                    continue
                 shuffled_adjacency_matrix = finder.find_adjacency_matrix_from_shuffled_data(extracted_data.activity_matrix)
                 adjacency_matrix -= shuffled_adjacency_matrix
 
@@ -61,7 +66,8 @@ class SubnetworkAnalysis:
                     ], index=output.columns)
                 output = output.append(new_row, ignore_index=True)
 
-        output.to_csv(mouse_name + "_all_sessions")
+        output.to_csv(mouse_name + "_all_sessions.csv")
+        return output
 
     @staticmethod
     def identify_network_and_visualise(region):
@@ -125,6 +131,9 @@ if __name__ == "__main__":
     #SubnetworkAnalysis.identify_network_and_visualise("VISam")
 
     regions = ["VISa", "VISam", "VISl", "VISp", "VISpm", "VISrl", "ACA", "AUD", "COA", "DP", "ILA", "MOp", "MOs", "OLF", "ORB", "ORBm", "PIR", "PL", "SSp", "SSs", "RSP", "TT"]
-    six_regions = ["VISam", "ACA", "MOs", "PL", "MOp", "SSp", "APN"]
-    SubnetworkAnalysis.identify_subnetwork_across_sessions(regions)
+    output = SubnetworkAnalysis.identify_subnetwork_across_sessions(regions)
+    #output = pd.read_csv("Lederberg_all_sessions.csv")
+    # TODO: differentiate whether there were no measured cells or whether it just didn't reach threshold
+    perform_t_sne_on_subnetworks(output)
+
 
