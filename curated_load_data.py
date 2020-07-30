@@ -146,6 +146,15 @@ session_number = 11
 dat = alldat[session_number]
 region = "VISam"
 
+responses = pd.DataFrame(dat['response'])
+drop_nogo_responses = responses[responses != 0] # drops no-go trials
+drop_nogo_responses.dropna(inplace=True)
+
+# recode right choice = 0, keep left choice = 1
+drop_nogo_responses.replace(-1, 0, inplace=True)
+
+drop_nogo_trials = drop_nogo_responses.index
+
 dat_LFP = all_dat_LFP[session_number]
 dat_WAV = all_dat_WAV[session_number]
 dat_ST = all_dat_ST[session_number]
@@ -155,13 +164,13 @@ all_trials_window_counts = pd.DataFrame()
 
 # gets spike times and counts for all neurons in all trials for region of interest
 
-for trial_number in range(len(dat['response_time'])):
+for trial_number in drop_nogo_trials:
 
     # for all neurons, extract spike counts in the window [t-100ms, t], where t is the response time
-    trial_response_time = dat['response_time'][trial_number] # response time for the first trial
+    trial_response_time = dat['response_time'][trial_number] # response time for the  trial
     pre_move_window_start = trial_response_time - 0.1
 
-    all_spike_times = dat_ST['ss'][dat['brain_area']==region][:,trial_number] # spike times for the first trial in all neurons
+    all_spike_times = dat_ST['ss'][dat['brain_area']==region][:,trial_number] # spike times for the trial in all neurons
 
     all_spikes_in_window = []
     all_counts_in_window = []
@@ -200,12 +209,12 @@ trial_summed_spike_counts = np.asarray(trial_summed_spike_counts)
 
 avg_pupil_areas_in_decision = []
 
-for trial_number in range(len(dat['response_time'])):
+for trial_number in drop_nogo_trials:
   pupil_areas_in_decision = dat['pupil'][0][trial_number][int(response_t_bins[trial_number])-number_of_bins_for_analysis:int(response_t_bins[trial_number])]
   avg_pupil_area = np.mean(pupil_areas_in_decision)
   avg_pupil_areas_in_decision.append(avg_pupil_area)
 
-y_response = dat['response']
+y_response = drop_nogo_responses
 
 x_array = pd.DataFrame()
 x_array['pupil_area'] = avg_pupil_areas_in_decision
@@ -267,7 +276,7 @@ def compute_accuracy(X, y, model):
   return accuracy
 
 # Uncomment and run to test your function:
-train_accuracy = compute_accuracy(X, y_response, log_reg)
+train_accuracy = compute_accuracy(X, y_response.values, log_reg)
 print(f"Accuracy on the training data: {train_accuracy:.2%}")
 
 
